@@ -13,6 +13,8 @@ public class keywordscene : MonoBehaviour
 {
     private KeywordRecognizer keywordRecognizer;
     private KeywordRecognitionModel keywordModel;
+    private string outputPath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\output.txt" : @"Assets/Python/speechRecognition/output.txt";
+
     public static bool r = true;
     // Start is called before the first frame update
     void Start()
@@ -64,6 +66,7 @@ public class keywordscene : MonoBehaviour
                         }
                         File.WriteAllText("NowAssistent.txt", "芬尼(Fanny)");
                     }
+                File.WriteAllText(outputPath, string.Empty);
                 SceneManager.LoadScene(1);
                 }
             }

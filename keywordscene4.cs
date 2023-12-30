@@ -13,6 +13,7 @@ public class keywordscene4 : MonoBehaviour
 {
     private KeywordRecognizer keywordRecognizer;
     private KeywordRecognitionModel keywordModel;
+    private string outputPath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\output.txt" : @"Assets/Python/speechRecognition/output.txt";
     // Start is called before the first frame update
     void Start()
     {
@@ -63,7 +64,7 @@ public class keywordscene4 : MonoBehaviour
                     }
                     File.WriteAllText("NowAssistent.txt", "艾迪(Eddie)");
                 }
-                
+                File.WriteAllText(outputPath, string.Empty);
                 SceneManager.LoadScene(1);
             }
         }
