@@ -1085,7 +1085,7 @@ public class inputChat : MonoBehaviour
                         
                     case 3: //時效性問答 or 網路查詢
                             //print("需使用網路查詢");
-                        toSendData_I(originalText);
+                        toSendData_I($"{originalText}（備註：請使用中文查詢，並使用中文回答。）");
                         break;
 
                     case 1: //一般聊天 or 非時效性問答

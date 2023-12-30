@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Gmail
 {
@@ -199,12 +200,14 @@ public class Gmail
         inputChat.print(_callback);
         try
         {
-            int task = int.Parse(Regex.Replace(_callback, @"\D", string.Empty));
+            int task = int.Parse(Regex.Replace(_callback.Substring(0, 1), @"\D", string.Empty));
             inputChat.print("task:" + MailData.task);
 
             switch(task)
             {
                 case 1:
+                    if (MailData.task == -1)
+                        guideTask = task;
                     AiSpack($"好的。您現在正在使用 {MailBox.Name} 的信箱，正在幫您搜尋信件中...");
 
                     string text1 = _callback.Substring(1);
@@ -214,7 +217,7 @@ public class Gmail
                         "gmail",
                         chatGPT.getApiKey(),
                         inputChat.zapier_Key,
-                        $"Search {text1}"));
+                        $"（查詢郵件）{text1}（備註：使用中文回答。）"));
                     break;
                 case 2:
                     if (MailData.task == -1)
@@ -263,7 +266,7 @@ public class Gmail
                     break;
             }
         }catch{
-            AiSpack(_callback);
+            AiSpack($"我不太明白你的要求，也許你能說得更清楚一些。");
             threadLocker = false;
         }
     }
@@ -305,7 +308,7 @@ public class Gmail
                     "gmail",
                     chatGPT.getApiKey(),
                     inputChat.zapier_Key,
-                    $"寄送一封信件給{MailData.addressee_Email}；信件標題：{MailData.subject}；信件內容：{MailData.mailText}"));
+                    $"寄送一封信件給{MailData.addressee_Email}；信件標題：{MailData.subject}；信件內容：{MailData.mailText}（備註：使用原文編寫郵件，使用中文回答。）"));
                     break;
                 case 5:
                     inputChat.CancelSendMail();
