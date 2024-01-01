@@ -114,14 +114,15 @@ public class inputAnalyze : MonoBehaviour
     public static IEnumerator chatGPT_mood(
         string text,
         string text1,
-        System.Action<string,string, string, bool> _callback //異步回傳函式
+        int questionID,
+        System.Action<string,string, string, bool, int> _callback //異步回傳函式
         )
     {
         bool end = Regex.IsMatch(text, @"(（End）)|(\(End\))$");
         text = Regex.Replace(text, @"((\(End\))|(（End）))", string.Empty);
         string mood = Regex.Replace(Regex.Match(text, @"(（[、,\d]+）)|(\([\,,\d]+\))$").Value, @"(\(|\)|（|）)", string.Empty);
         string mainText = Regex.Replace(text, @"(（\S+）)|(\(\S+\))$", string.Empty);
-        _callback(mainText, text1, mood, end);
+        _callback(mainText, text1, mood, end, questionID);
         yield return null;
     }
 }
