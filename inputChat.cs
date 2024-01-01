@@ -97,7 +97,6 @@ public class inputChat : MonoBehaviour
     private string modePath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\mode.txt" : @"Assets/Python/speechRecognition/mode.txt";
     private string outputPath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\output.txt" : @"Assets/Python/speechRecognition/output.txt";
     private string readyPath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\ready.txt" : @"Assets/Python/speechRecognition/ready.txt";
-    public int lastQuestionID = 0;
 
     //搜索引擎API key
     string serpapi_Key = "";
@@ -369,7 +368,7 @@ public class inputChat : MonoBehaviour
     }
 
     //GPT訊息 發送動作
-    public void toSendData(string _msg, int questionID)
+    public void toSendData(string _msg)
     {
 
         //取得輸入訊息
@@ -412,13 +411,12 @@ public class inputChat : MonoBehaviour
         //
         StartCoroutine(TurnToLastLine());
         //POST GPT訊息
-        StartCoroutine(chatGPT.GetPostData(_msg ,questionID, CallBack));
+        StartCoroutine(chatGPT.GetPostData(_msg, CallBack));
     }
 
     //GPT訊息 發送動作 (設備模式)
     public void toSendData_E(
-        string _msg,    //文字消息
-        int questionID
+        string _msg    //文字消息
     )
     {
         print(_msg);
@@ -428,7 +426,7 @@ public class inputChat : MonoBehaviour
         StartCoroutine(TurnToLastLine());
         //POST GPT訊息 (並添加訊息備註 提示chatGPT回答規範)
         _msg += "(簡短回覆編號即可)";
-        StartCoroutine(chatGPT.GetPostData_E(_msg, questionID, CallBack_E));
+        StartCoroutine(chatGPT.GetPostData_E(_msg, CallBack_E));
     }
 
     //GPT訊息 發送動作 (上網任務)
@@ -569,7 +567,7 @@ public class inputChat : MonoBehaviour
         SendMailDone();
     }
 
-     public void toSendData_time(string _msg, int questionID)
+     public void toSendData_time(string _msg)
     {
 
         DateTime currenttime=System.DateTime.Now;
@@ -584,7 +582,7 @@ public class inputChat : MonoBehaviour
 
         StartCoroutine(TurnToLastLine());
         //POST GPT訊息
-        StartCoroutine(chatGPT.GetPostData(_msg, questionID, CallBack));
+        StartCoroutine(chatGPT.GetPostData(_msg, CallBack));
     }
 
 
@@ -638,18 +636,13 @@ public class inputChat : MonoBehaviour
         }
 
         UnityEngine.Debug.Log("task: " + task + " " + originalText);
-        chatGPT.taskQueue.Enqueue(new SendQueue(originalText, task, ++lastQuestionID));
+        chatGPT.taskQueue.Enqueue(new SendQueue(originalText, task));
 
     }
 
     //GPT訊息 回傳動作
-    private void CallBack(string _callback, string sendMessage, string emotion, bool isEnd, int questionID)
+    private void CallBack(string _callback, string sendMessage, string emotion, bool isEnd)
     {
-        if (questionID != lastQuestionID)
-        {
-            chatGPT.taskState = 0;
-            return;
-        }
         //取得回傳訊息
         _callback = _callback.Trim();
         print("M: " + _callback);
@@ -687,10 +680,7 @@ public class inputChat : MonoBehaviour
         }
 
         if (equipmentMode)
-        {
-            _callback = "好的，收到。";
-            toSendData_E(sendMessage, questionID);
-        }
+            toSendData_E(sendMessage);
         else
             //chatGPT狀態 (空閒)
             chatGPT.taskState = 0;
@@ -736,7 +726,7 @@ public class inputChat : MonoBehaviour
     }
 
     //GPT訊息 回傳動作 (設備操作使用)
-    private void CallBack_E(string _callback, int questionID)
+    private void CallBack_E(string _callback)
     {
         //取得回傳訊息
         _callback = _callback.Trim();
@@ -761,7 +751,7 @@ public class inputChat : MonoBehaviour
         //String equipmentState = "(裝置狀態)裝置無法連接";
         //String equipmentState = "(裝置狀態)查無此裝置";
         //String equipmentState = "(裝置狀態)操作失敗，原因:未知";
-        toSendData(equipmentState, questionID);
+        toSendData(equipmentState);
 
         //讀取現有對話紀錄
         var outputString = JsonUtility.ToJson(new Serialization<SendData>(chatGPT.e_DataList));
@@ -1085,22 +1075,20 @@ public class inputChat : MonoBehaviour
             if (chatGPT.taskState == 0 && chatGPT.taskQueue.Count > 0)
             {
                 UnityEngine.Debug.Log("==========進到這裡了===========");
-                //chatGPT.taskState = 1;
+                chatGPT.taskState = 1;
 
                 SendQueue task = chatGPT.taskQueue.Dequeue();
                 string originalText = task.getText();
                 int taskClass = task.getTaskClass();
-                int questionID = task.getQuestionID();
 
                 switch (taskClass)
                 {
                     case 2: //設備操作
                         equipmentMode = true;
                         firstEquipment = true;
-                        toSendData(originalText, questionID);
+                        toSendData(originalText);
                         break;
                     case 4:
-                        chatGPT.taskState = 1;
                         Gmail.MailBoxData mailBoxData = selectLestMailBox();
                         if (mailBoxData == null)
                             break;
@@ -1110,7 +1098,7 @@ public class inputChat : MonoBehaviour
                         UnityEngine.Debug.Log("傳送郵件");
                         break;
                     case 5:
-                        toSendData_time(originalText, questionID);
+                        toSendData_time(originalText);
                         break;
                         
                     case 3: //時效性問答 or 網路查詢
@@ -1120,7 +1108,7 @@ public class inputChat : MonoBehaviour
 
                     case 1: //一般聊天 or 非時效性問答
                     default:
-                        toSendData(originalText, questionID);
+                        toSendData(originalText);
                         break;
                 }
             }

@@ -8,7 +8,6 @@ using Newtonsoft.Json;
 
 public class ChatGPT : MonoBehaviour
 {
-    public inputChat inputChat;
     // 對話列表(紀錄、設定)
     [SerializeField] public List<SendData> m_DataList = new List<SendData>();
     // 設備操作列表(紀錄、設定)
@@ -52,13 +51,11 @@ public class ChatGPT : MonoBehaviour
     {
         string text;
         int taskClass;
-        int questionID;
 
-        public SendQueue(string text,int taskClass, int lastQuestionID)
+        public SendQueue(string text,int taskClass)
         {
             this.text = text;
             this.taskClass = taskClass;
-            this.questionID = lastQuestionID;
         }
         public string getText()
         {
@@ -67,10 +64,6 @@ public class ChatGPT : MonoBehaviour
         public int getTaskClass()
         {
             return this.taskClass;
-        }
-        public int getQuestionID()
-        {
-            return questionID;
         }
     }
 
@@ -253,15 +246,12 @@ public class ChatGPT : MonoBehaviour
     // GPT Post訊息 (聊天模式)
     public IEnumerator GetPostData(
         string _postWord,   //輸入訊息
-        int questionID,
-        System.Action<string, string, string, bool, int> _callback //異步回傳函式
+        System.Action<string, string, string, bool> _callback //異步回傳函式
     )
     {
         print(_postWord);
         //緩存發送的訊息
         AddNewRecord(new SendData("user", _postWord));
-        if (inputChat.lastQuestionID != questionID)
-            yield return null;
 
         long responseCode = -1;
         while (responseCode != 200)
@@ -309,13 +299,11 @@ public class ChatGPT : MonoBehaviour
                         {
                             _backMsg = _textback.choices[0].message.content;
                         }
-                        if (inputChat.lastQuestionID != questionID)
-                            break;
                         //緩存回傳訊息
                         AddNewRecord(new SendData("assistant", _backMsg));
 
                         //返回函式 並做情緒分析
-                        yield return inputAnalyze.chatGPT_mood(_backMsg, _postWord, questionID, _callback);
+                        yield return inputAnalyze.chatGPT_mood(_backMsg, _postWord, _callback);
 
                         //返回函式
                         //_callback(_backMsg, emotion);
@@ -335,8 +323,7 @@ public class ChatGPT : MonoBehaviour
     // GPT Post訊息 (設備模式)
     public IEnumerator GetPostData_E(
         string _postWord,   //輸入訊息
-        int questionID,
-        System.Action<string, int> _callback //異步回傳函式
+        System.Action<string> _callback //異步回傳函式
     )
     {
         print(_postWord);
@@ -394,7 +381,7 @@ public class ChatGPT : MonoBehaviour
                         //返回函式 並做情緒分析
                         //yield return inputAnalyze.GetPostData(_backMsg, _callback);
 
-                        _callback(_backMsg, questionID);
+                        _callback(_backMsg);
                     }
                 }
             }
