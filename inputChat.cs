@@ -61,14 +61,12 @@ public class inputChat : MonoBehaviour
     private string now_time;
     private DateTime currenttime;
     //  當前狀態
-    private bool NowLastCallback;
-    private string last_callback1 = "fjweiofwoanow;iefnoiwefnowfnowe";
-    private string last_callback2 = "fjweiofwoanow;iefnoiwefnowfnowe";
+    private string last_callback = "fjweiofwoanow;iefnoiwefnowfnowe";
     //AI暫停播放關鍵字
     private const string callAI = "暫停播放";
 
-    List<string> aitalkingkeyword = new List<string> {"隨時向我", "當然可以", "好的", "感謝回覆", "收到命令", "收到指令", "感謝您的回覆", "非常抱歉", "感謝回報"};
-    List<string> aitalkingkeyword2 = new List<string> {"隨時向我", "當然可以", "好的", "感謝回覆", "感謝您的回覆", "感謝回報"};
+    List<string> aitalkingkeyword = new List<string> {"感謝回覆", "收到命令", "收到指令", "感謝您的回覆", "非常抱歉", "感謝回報"};
+    List<string> aitalkingkeyword2 = new List<string> {"感謝回覆", "感謝您的回覆", "感謝回報"};
     //AI語音播放器
     private text_to_voice Speaker;
     //python控制
@@ -109,7 +107,7 @@ public class inputChat : MonoBehaviour
     public float minTimeBetweenAnimations = 10.0f; // 最小間隔時間
     public float maxTimeBetweenAnimations = 20.0f; // 最大間隔時間
     public bool inputvoice = false;
-    private bool ChatIsNotEnd;
+
     //python 辨識說話的進程
     public Process speechRecognitionProcess = null;
 
@@ -131,8 +129,7 @@ public class inputChat : MonoBehaviour
     void Start()
     {
         File.WriteAllText(modePath, "1");
-        ChatIsNotEnd = true;
-        NowLastCallback = true;
+
         //讀取鑰匙
         try
         {
@@ -251,7 +248,7 @@ public class inputChat : MonoBehaviour
         }
         //speechRecognitionProcess.Kill();
     }
-/*
+
     private async void InitializeSpeechRecognizer()
     {
 
@@ -280,7 +277,7 @@ public class inputChat : MonoBehaviour
             inputvoice = true;
             //newMessage = "打開電燈。";
             //呼叫字串比較，不是由AI回答，並且提到"操作設備"則進入設備模式
-            
+            /*
             if (!equipmentMode)
             {
                 //任務進入設備模式 (之後會由分析用戶任務導向的方式控制 目前仍由偵測關鍵詞進入)
@@ -293,7 +290,7 @@ public class inputChat : MonoBehaviour
                     firstEquipment = true;
                 }
             }
-            
+            */
         }
         else
         {
@@ -328,7 +325,7 @@ public class inputChat : MonoBehaviour
         }
 
         // 設定回傳的結果類型為 RecognizedSpeech
-        
+        /*
         recognizer.Recognized += (s, e) =>
         {
             if (e.Result.Reason == ResultReason.RecognizedSpeech)
@@ -338,7 +335,7 @@ public class inputChat : MonoBehaviour
                 //recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
             }
         };
-        
+        */
 
         // 開始語音辨識
         // await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
@@ -346,7 +343,7 @@ public class inputChat : MonoBehaviour
         //保证至少一个任务完成（等待到结束时间执行后再结束）
         //Task.WaitAny(new[] { stopRecognition.Task });
     }
-*/
+
     //當發送鍵被按下
     void TaskOnClick()
     {
@@ -661,7 +658,6 @@ public class inputChat : MonoBehaviour
         if ((isEnd && !equipmentMode) || Regex.Match(sendMessage,@"\(裝置狀態\)").Success)
         {
             print($"ChatGPT - 判斷對話結束");
-            ChatIsNotEnd = false;
             //重新計時
             timer = 0f;
             countingStop = false;
@@ -670,14 +666,7 @@ public class inputChat : MonoBehaviour
         Speaker.ChangeEmotion(now_emo);
         animationControl.set_action(now_act);
         animationControl.set_face(now_face);
-        if(NowLastCallback){
-            last_callback1 = _callback;
-            NowLastCallback = false;
-        }
-        else{
-            last_callback2 = _callback;
-            NowLastCallback = true;
-        }
+        last_callback = _callback;
 
         if (equipmentMode)
             toSendData_E(sendMessage);
@@ -735,12 +724,12 @@ public class inputChat : MonoBehaviour
         if (Command_control.choose_command(_callback))
         {
             StartCoroutine(TurnToLastLine());
-            equipmentState = "回答「裝置已操作成功」";
+            equipmentState = "(裝置狀態)裝置已操作成功，裝置目前狀態:啟用";
         }
         else
         {
             StartCoroutine(TurnToLastLine());
-            equipmentState = "回答「裝置操作失敗，查無此裝置」";
+            equipmentState = "(裝置狀態)查無此裝置";
         }
         //觸發指令操作
         //
@@ -990,18 +979,12 @@ public class inputChat : MonoBehaviour
                             string toMessage = Regex.Replace(m.Value, @"[\[,',\]]", string.Empty);
                             //print(text);
                             //呼叫字串比較，只要大於一定值就直接無視
-                            var check_numL1 = ClassSim.MatchKeywordSim(last_callback1, toMessage);
-                            var check_numL2 = ClassSim.MatchKeywordSim(last_callback2, toMessage);
+                            var check_num = ClassSim.MatchKeywordSim(last_callback, toMessage);
                             KeywordComparer check_num3 = new KeywordComparer();
                             check_num3.KeywordComparer2(aitalkingkeyword);
                             var ismatch = check_num3.CompareWithKeywords(toMessage);
-                            UnityEngine.Debug.Log("LLLLLLLL1111 = " + last_callback1);
-                            UnityEngine.Debug.Log("LLLLLLLL2222 = " + last_callback2);
-                            UnityEngine.Debug.Log("NNNNNNNNNNow = " + toMessage);
-                            UnityEngine.Debug.Log("+++check_numL1 = " + check_numL1 + "+++check_numL2 = " + check_numL2 + "+++---ismatch = " + ismatch);
-                            if (check_numL1 >= 0.4 || check_numL2 >= 0.4 || ismatch)
+                            if (check_num >= 0.5 || ismatch)
                             {
-                                UnityEngine.Debug.Log("!!!!!!!!break!!!!!!!!!");
                                 Rec = 0;
                                 File.WriteAllText(outputPath, string.Empty);
                                 return;
@@ -1074,7 +1057,6 @@ public class inputChat : MonoBehaviour
         {
             if (chatGPT.taskState == 0 && chatGPT.taskQueue.Count > 0)
             {
-                UnityEngine.Debug.Log("==========進到這裡了===========");
                 chatGPT.taskState = 1;
 
                 SendQueue task = chatGPT.taskQueue.Dequeue();
@@ -1116,7 +1098,6 @@ public class inputChat : MonoBehaviour
     }
     public void speak(string text)
     {
-        Speaker.Mute();
         // 將語音合成標誌設置為 true，表示正在進行語音合成
         isSpeaking = true;
 
@@ -1129,20 +1110,10 @@ public class inputChat : MonoBehaviour
         Speaker.readString(text, speak_style, () =>
         {
             isSpeaking = false;
-            
-            StartCoroutine(delaySwitchMode());
-            UnityEngine.Debug.Log("---------ChatIsNotEnd = " + ChatIsNotEnd);
-            if(!ChatIsNotEnd){
-                UnityEngine.Debug.Log("??????????????????????");
-            //    SceneManager.LoadScene(0);
-                isCounting = false;
-            }
+            File.WriteAllText(modePath, "1");
         });
     }
-    private IEnumerator delaySwitchMode(){
-        yield return new WaitForSeconds(1.0f);
-        File.WriteAllText(modePath, "1");
-    }
+
     private IEnumerator AnimateFace()
     {
         int i = 1;
@@ -1244,7 +1215,7 @@ public class ClassSim
             numA += Math.Pow(arrA[i], 2);
             numB += Math.Pow(arrB[i], 2);
         }
-        double cos = num / (Math.Sqrt(numA) * Math.Sqrt(numB))/* + unionKeyword.Count * 0.00155*/;
+        double cos = num / (Math.Sqrt(numA) * Math.Sqrt(numB));
         return cos;
     }
 }
