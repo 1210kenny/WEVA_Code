@@ -16,6 +16,7 @@ public class keywordscene : MonoBehaviour
     private string outputPath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\output.txt" : @"Assets/Python/speechRecognition/output.txt";
 
     public static bool r = true;
+    private bool keepDelete;
     // Start is called before the first frame update
     void Start()
     {
@@ -27,6 +28,8 @@ public class keywordscene : MonoBehaviour
         keywordModel = KeywordRecognitionModel.FromFile(keywordModelPath);
         var audioConfig = AudioConfig.FromDefaultMicrophoneInput();
         keywordRecognizer = new KeywordRecognizer(audioConfig);
+        r = true;
+        StartCoroutine(delayDeleteFile());
         StartKeywordRecognition();
     }
     static string ConvertWindowsToMacOSPath(string windowsPath)
@@ -45,7 +48,7 @@ public class keywordscene : MonoBehaviour
             try
             {
                 KeywordRecognitionResult result = await keywordRecognizer.RecognizeOnceAsync(keywordModel);
-
+                keepDelete = false;
                 if (result.Reason == ResultReason.RecognizedKeyword)
                 {
                     r = false;
@@ -66,7 +69,7 @@ public class keywordscene : MonoBehaviour
                         }
                         File.WriteAllText("NowAssistent.txt", "芬尼(Fanny)");
                     }
-                File.WriteAllText(outputPath, string.Empty);
+                //File.WriteAllText(outputPath, string.Empty);
                 SceneManager.LoadScene(1);
                 }
             }
@@ -76,6 +79,12 @@ public class keywordscene : MonoBehaviour
                 Debug.LogError("" + ex.Message);
             }
         
+    }
+    public IEnumerator delayDeleteFile(){
+        while(false){
+            File.WriteAllText(outputPath, string.Empty);
+            yield return new WaitForSeconds(2f);
+        }
     }
     private async Task StopKeywordRecognitionAsync()
     {

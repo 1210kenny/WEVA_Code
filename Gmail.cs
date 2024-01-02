@@ -10,7 +10,7 @@ public class Gmail
     //chatGPT對話 物件
     public ChatGPT chatGPT;
     public inputChat inputChat;
-
+    private string modePath = Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor ? @"Assets\Python\speechRecognition\mode.txt" : @"Assets/Python/speechRecognition/mode.txt";
     private MailBoxData MailBox = new MailBoxData();
     private MailBody MailData = new MailBody();
     private int guideTask = 0;
@@ -466,6 +466,15 @@ public class Gmail
 
     void AiSpack(string text)
     {
+        File.WriteAllText(modePath, "2");
+        if(inputChat.NowLastCallback){
+            inputChat.last_callback1 = text;
+            inputChat.NowLastCallback = false;
+        }
+        else{
+            inputChat.last_callback2 = text;
+            inputChat.NowLastCallback = true;
+        }
         inputChat.speak(text);
         //建構對話條
         var vChatWindow = inputChat.chatWindow.transform.localPosition;

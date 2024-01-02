@@ -7,6 +7,8 @@ using UnityEngine.Networking;
 using UnityEngine;
 using System.Collections;
 using System.Threading;
+//using System.Speech.Synthesis;
+
 
 public class text_to_voice : MonoBehaviour
 {
@@ -20,6 +22,7 @@ public class text_to_voice : MonoBehaviour
     public static SpeechSynthesizer synthesizer;
     public string speak_style = "assistant";
     public bool isSpeaking = false;
+    //public static event Action NowTheSpeakIsCompleted;
     private int index;
     [SerializeField]
     private AnimationControl animationControl;
@@ -44,6 +47,7 @@ public class text_to_voice : MonoBehaviour
         config_.SpeechSynthesisVoiceName = "zh-CN-YunxiNeural";
         }//zh-CN-YunyeNeural
         synthesizer = new SpeechSynthesizer(config_);
+        //synthesizer.SpeakCompleted += Synthesizer_SpeakCompleted;
         UnityEngine.Debug.Log("CharacterSelected index in voice: " + index);
     }
 
@@ -75,12 +79,16 @@ public class text_to_voice : MonoBehaviour
         synthesizer.StopSpeakingAsync();
         isSpeaking = false;
         File.WriteAllText(modePath, "1");
+        synthesizer = new SpeechSynthesizer(config_);
     }
 
-
+    //public void Synthesizer_SpeakCompleted(){
+    //    NowTheSpeakIsCompleted?.Invoke();
+    //    return;
+    //}
 
     // 非同步方法用於執行語音合成
-    async public void readString(string text, string style, Action onCompleted)
+    /*async public void readString(string text, string style, Action onCompleted)
     {
        
         var ssml = $"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'>" +
@@ -111,7 +119,43 @@ public class text_to_voice : MonoBehaviour
                 }
             }
         }
-        speak_style="assistant";
+    }*/
+    public async void readString(string text, string style, Action onCompleted)
+    {
+        // 設定語音合成器
+        //using (synthesizer)
+        //{
+            // 訂閱合成完成事件
+            File.WriteAllText(modePath, "2");
+            synthesizer.SynthesisCompleted += (s, e) =>
+            {
+                Console.WriteLine($"Speech synthesized!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                onCompleted?.Invoke(); // 當播放完成時調用onCompleted
+                speak_style="assistant";
+            };
+
+            // 準備SSML
+            var ssml = $"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'>" +
+                $"<voice name='{config_.SpeechSynthesisVoiceName}' style='{style}'>" +
+                $"{text}" +
+                "</voice></speak>";
+
+            // 開始合成
+            var result = await synthesizer.SpeakSsmlAsync(ssml);
+
+            if (result.Reason == ResultReason.Canceled)
+            {
+                var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                Console.WriteLine($"CANCELED: Reason={cancellation.Reason}");
+
+                if (cancellation.Reason == CancellationReason.Error)
+                {
+                    Console.WriteLine($"CANCELED: ErrorCode={cancellation.ErrorCode}");
+                    Console.WriteLine($"CANCELED: ErrorDetails=[{cancellation.ErrorDetails}]");
+                    Console.WriteLine($"CANCELED: Did you update the subscription info?");
+                }
+            }
+        //}
     }
     public void ChangeEmotion(string emotion)
     {

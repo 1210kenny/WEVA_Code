@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 
 public class menulist : MonoBehaviour
 {
+    public inputChat inputChat;
+
     void Start()
     {
         
@@ -21,21 +23,23 @@ public class menulist : MonoBehaviour
     }
     public void Restart()
     {
+        inputChat.Speaker.Mute();
         SceneManager.LoadScene(1);
-        
     }
     public void Exit()
     {
+        inputChat.Speaker.Mute();
         Application.Quit();
     }
     public void change()
     {
+        inputChat.Speaker.Mute();
         SceneManager.LoadScene(2);
         
     }
     public void start()
     {
+        inputChat.Speaker.Mute();
         SceneManager.LoadScene(0);
-
     }
 }

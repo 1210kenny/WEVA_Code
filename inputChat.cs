@@ -61,16 +61,16 @@ public class inputChat : MonoBehaviour
     private string now_time;
     private DateTime currenttime;
     //  當前狀態
-    private bool NowLastCallback;
-    private string last_callback1 = "fjweiofwoanow;iefnoiwefnowfnowe";
-    private string last_callback2 = "fjweiofwoanow;iefnoiwefnowfnowe";
+    public bool NowLastCallback;
+    public string last_callback1 = "fjweiofwoanow;iefnoiwefnowfnowe";
+    public string last_callback2 = "fjweiofwoanowoiwefnowfnowe";
     //AI暫停播放關鍵字
     private const string callAI = "暫停播放";
 
-    List<string> aitalkingkeyword = new List<string> {"隨時向我", "當然可以", "好的", "感謝回覆", "收到命令", "收到指令", "感謝您的回覆", "非常抱歉", "感謝回報"};
-    List<string> aitalkingkeyword2 = new List<string> {"隨時向我", "當然可以", "好的", "感謝回覆", "感謝您的回覆", "感謝回報"};
+    List<string> aitalkingkeyword = new List<string> {"正在查詢通訊錄中", "隨時向我", "當然可以", "感謝回覆", "收到命令", "收到指令", "感謝您的回覆", "非常抱歉", "感謝回報"};
+    List<string> aitalkingkeyword2 = new List<string> {"正在查詢通訊錄中", "隨時向我", "當然可以", "感謝回覆", "收到命令", "收到指令", "感謝您的回覆", "非常抱歉", "感謝回報"};
     //AI語音播放器
-    private text_to_voice Speaker;
+    public text_to_voice Speaker;
     //python控制
     //private PythonScript PythonScript;
     //設備關鍵字
@@ -113,7 +113,8 @@ public class inputChat : MonoBehaviour
     private bool ChatIsNotEnd;
     //python 辨識說話的進程
     public Process speechRecognitionProcess = null;
-
+    private bool filelock = true;
+    private string NowAssistentName;
     void talkProcess(Process process)
     {
         speechRecognitionProcess = process;
@@ -132,6 +133,7 @@ public class inputChat : MonoBehaviour
     void Start()
     {
         File.WriteAllText(modePath, "1");
+        filelock = true;
         ChatIsNotEnd = true;
         NowLastCallback = true;
         //讀取鑰匙
@@ -166,13 +168,30 @@ public class inputChat : MonoBehaviour
         StartCoroutine(PlayAnimationEveryMinute());
         // 開始一個協程來監視Rec的值
         StartCoroutine(MonitorRec());
-
+        try
+        {
+            var inputString = File.ReadAllText("NowAssistent.txt");
+            if (!String.IsNullOrEmpty(inputString))
+                NowAssistentName = inputString;
+        }
+        //無人物設定 則創建新檔案並儲存
+        catch (Exception e)
+        {
+            // 如果讀取文件失敗，創建一個新的文件
+            using (var fs = File.Create("NowAssistent.txt"))
+            {
+                fs.Close(); // 確保文件被關閉和釋放
+            }
+            NowAssistentName = "米拉(Mira)";
+            File.WriteAllText("NowAssistent.txt", NowAssistentName);
+        }
+        
         //chatGPT(聊天) 預設角色
-        chatGPT.m_DataList.Add(new SendData("system", "你是虛擬助手，清將使用者的文字輸入都當作是你聽到的，你可以回答任何問題，請將你所有的問字回覆都當作你說出來的話；同時也是一個可以控制設備AI，在接收命令時，只表示願意執行即可，等待後續輸入再根據(裝置狀態)做回應，若(裝置狀態)是失敗的，請根據狀態描述提示用戶可能的錯誤原因。我知道現在的時間和日期。"));
-        chatGPT.m_DataList.Add(new SendData("system", "你要在結尾輸出該次對話的情緒及動作、表情在括弧中，輸出規則為（情緒、動作、表情），請使用數字編號回答，" +
-            "情緒：1.深情、2.憤怒、3.助理、4.冷靜、5.聊天、6.快樂、7.客戶服務、8.不滿、9.恐懼、10.友好、11.溫柔、12.抒情、13.新聞廣播、14.詩歌朗誦、15.悲傷、16.嚴肅、17.害羞、18.沮喪；" +
-            "動作：1.普通地站著、2.雙手前後擺動顯得感到有點無聊、3.抱胸用力跺腳非常生氣、4.快速微微正式鞠躬、5.身體傾斜很不正式的鞠躬、6.低頭踢腳有點難過、7.大力揮手、8.打哈欠以及伸懶腰、9.開心的晃動身體與手臂、10.伸展手臂、11.雀躍的搖晃手臂與身體、12.興奮的小跳；" +
-            "表情：1.微笑、2.覺得好笑的笑臉（眼睛沒有完全閉起來，嘴巴也沒有張開）、3.生氣、4.哀傷、5.驚訝、6.覺得非常好笑的笑臉（眼睛完全閉起、嘴巴微微張開）；" +
+        chatGPT.m_DataList.Add(new SendData("system", "你的名字是" + NowAssistentName + "你是虛擬助手，你能聽到使用者說話，請將使用者的文字輸入都當作是你聽到的，你也可以說話來回答任何問題，請將你所有的問字回覆都當作你說出來的話；同時也是一個可以控制設備AI，在接收命令時（目前只能操控電燈），只表示願意執行即可，等待後續輸入再根據(裝置狀態)做回應，若(裝置狀態)是失敗的，請根據狀態描述提示用戶可能的錯誤原因。我知道現在的時間和日期。"));
+        chatGPT.m_DataList.Add(new SendData("system", "你能夠透過以下的編號來操控你的表情、動作、語調風格，你要在結尾輸出該次對話的語調風格及動作、表情在括弧中，輸出規則為（語調風格、動作、表情），請使用數字編號回答，" +
+            "你能操控的語調風格種類：1.深情、2.憤怒、3.助理、4.冷靜、5.聊天、6.快樂、7.客戶服務、8.不滿、9.恐懼、10.友好、11.溫柔、12.抒情、13.新聞廣播、14.詩歌朗誦、15.悲傷、16.嚴肅、17.害羞、18.沮喪；" +
+            "你能操控的動作種類：1.普通地站著、2.雙手前後擺動顯得感到有點無聊、3.抱胸用力跺腳非常生氣、4.快速微微正式鞠躬、5.身體傾斜很不正式的鞠躬、6.低頭踢腳有點難過、7.大力揮手、8.打哈欠以及伸懶腰、9.開心的晃動身體與手臂、10.伸展手臂、11.雀躍的搖晃手臂與身體、12.興奮的小跳；" +
+            "你能操控的表情種類：1.微笑、2.覺得好笑的笑臉（眼睛沒有完全閉起來，嘴巴也沒有張開）、3.生氣、4.哀傷、5.驚訝、6.覺得非常好笑的笑臉（眼睛完全閉起、嘴巴微微張開）；" +
             "範例：「（6、2、2）」、「（3、4、1）」"));
         chatGPT.m_DataList.Add(new SendData("system", "若使用者回傳的語句開頭有（裝置狀態），則將其內容簡單告知使用者，請勿回覆「了解，感謝您的回報」" +
             "範例：使用者：(裝置狀態)裝置已操作成功，裝置目前狀態:啟用。你要回答：裝置已經操作成功"));
@@ -239,7 +258,14 @@ public class inputChat : MonoBehaviour
         {
             File.Create("EquipmentLog.json");
         }
+        //Speaker.NowTheSpeakIsCompleted += WhenStopSpeaking;
 
+    }
+    private void WhenStopSpeaking(){
+        isSpeaking = false;
+        UnityEngine.Debug.Log("WhenStopSpeaking");
+        //File.WriteAllText(modePath, "1");
+        UnityEngine.Debug.Log("---------ChatIsNotEnd = " + ChatIsNotEnd);
     }
 
     void OnDestroy()
@@ -678,12 +704,16 @@ public class inputChat : MonoBehaviour
         animationControl.set_action(now_act);
         animationControl.set_face(now_face);
         if(NowLastCallback){
+            UnityEngine.Debug.Log("NowLastCallback11 = " + NowLastCallback);
             last_callback1 = _callback;
             NowLastCallback = false;
+            UnityEngine.Debug.Log("NowLastCallback12 = " + NowLastCallback);
         }
         else{
+            UnityEngine.Debug.Log("NowLastCallback21 = " + NowLastCallback);
             last_callback2 = _callback;
             NowLastCallback = true;
+            UnityEngine.Debug.Log("NowLastCallback22 = " + NowLastCallback);
         }
 
         if (equipmentMode)
@@ -958,6 +988,19 @@ public class inputChat : MonoBehaviour
 
     void Update()
     {
+        if(!isSpeaking && !ChatIsNotEnd){
+            SceneManager.LoadScene(0);
+            isCounting = false;
+        }
+        else if(!isSpeaking && File.ReadAllText(modePath) == "1" && !filelock){
+            filelock = true;
+        }
+        else if(!isSpeaking && File.ReadAllText(modePath) == "2" && filelock){
+            filelock = false;
+            StartCoroutine(delaySwitchMode());
+            UnityEngine.Debug.Log("delaySwitchMode!!!!!!!!!!!!!!!!!!!!!!");
+        }
+        
         if (!ready)
         {
             try
@@ -1009,7 +1052,7 @@ public class inputChat : MonoBehaviour
                             UnityEngine.Debug.Log("LLLLLLLL2222 = " + last_callback2);
                             UnityEngine.Debug.Log("NNNNNNNNNNow = " + toMessage);
                             UnityEngine.Debug.Log("+++check_numL1 = " + check_numL1 + "+++check_numL2 = " + check_numL2 + "+++---ismatch = " + ismatch);
-                            if (check_numL1 >= 0.4 || check_numL2 >= 0.4 || ismatch)
+                            if (check_numL1 >= 0.6 || check_numL2 >= 0.6 || ismatch)
                             {
                                 UnityEngine.Debug.Log("!!!!!!!!break!!!!!!!!!");
                                 Rec = 0;
@@ -1018,17 +1061,18 @@ public class inputChat : MonoBehaviour
                             }
                             else{
                                 //停止現有的AI對話與音輸出
+                                ChatIsNotEnd = true;
                                 Speaker.Mute();
 
                                 //強制結束播放（不用等回傳到）ChatGPT的時間
-                                var check_num1 = ClassSim.MatchKeywordSim(callAI, toMessage);
-                                if (check_num1 >= 0.5)
-                                {
-                                    Rec = 0;
+                                //var check_num1 = ClassSim.MatchKeywordSim(callAI, toMessage);
+                                //if (check_num1 >= 0.5)
+                                //{
+                                //    Rec = 0;
                                     //停止現有的AI對話與音輸出
-                                    Speaker.Mute();
-                                    return;
-                                }
+                                    //Speaker.Mute();
+                                //    return;
+                                //}
 
                                 //chatGPT請求 (做任務分類)
                                 if (gmailObject == null)
@@ -1138,23 +1182,13 @@ public class inputChat : MonoBehaviour
         StartCoroutine(AnimateFace());
 
         // 調用 readString 方法來進行語音合成，並在合成完成後設置 isSpeaking 為 false
-        Speaker.readString(text, speak_style, () =>
-        {
-            isSpeaking = false;
-            
-            StartCoroutine(delaySwitchMode());
-            UnityEngine.Debug.Log("---------ChatIsNotEnd = " + ChatIsNotEnd);
-            if(!ChatIsNotEnd){
-                UnityEngine.Debug.Log("??????????????????????");
-            //    SceneManager.LoadScene(0);
-                isCounting = false;
-            }
-        });
+        Speaker.readString(text, speak_style, WhenStopSpeaking);
     }
-    private IEnumerator delaySwitchMode(){
-        yield return new WaitForSeconds(1.0f);
+    public IEnumerator delaySwitchMode(){
+        yield return new WaitForSeconds(1.5f);
         File.WriteAllText(modePath, "1");
     }
+    
     private IEnumerator AnimateFace()
     {
         int i = 1;
