@@ -51,7 +51,6 @@ def match_keyword_sim(keyword, matchkeyword):
     
     return cos
 
-DO_DENOISE = False  # 啟用消除雜訊
 DEFAULT_MODEL = "openai/whisper-small"  # 使用 HuggingFace 上的 model
 # USE_DEFAULT_MODEL=True
 USE_DEFAULT_MODEL = False  # 設定是否使用 HuggingFace 上的 model, 或是 SAVEPATH 的 model
@@ -59,24 +58,11 @@ SAVEPATH = ConvertPath("./whisper-small-tw4")
 SEPFORMER_PATH = ConvertPath("pretrained_models/sepformer-wsj02mix")
 SEPFORMER_TEMP = ConvertPath("pretrained_models_tmp/sepformer-wsj02mix")
 
-if DO_DENOISE:  # 這有兩種不同的消除雜訊 model, 你可以試看看效果有沒有差異
-    # denoise_model = separator.from_hparams(source="speechbrain/noisy-whisper-resucespeech", savedir='pretrained_models/noisy-whisper-rescuespeech', hparams_file="enhance.yaml")
-    denoise_model = separator.from_hparams(source="speechbrain/sepformer-dns4-16k-enhancement",
-                                           savedir='pretrained_models/sepformer-dns4-16k-enhancement')
-
 GPUdevice = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
 sep_model = separator.from_hparams(source=SEPFORMER_PATH, savedir=SEPFORMER_TEMP, run_opts={"device": GPUdevice})
-# sep_model = separator.from_hparams(source="speechbrain/sepformer-wsj02mix", savedir='pretrained_models/sepformer-wsj02mix')
 
 Vocals = [50, 5000]  # 設定講話的合法頻率範圍, 設成 2000 是因為不想過濾高頻部分.
-# SampleRate = 3000
-# SampleRate = 6000
-# SampleRate = 7500
-# SampleRate = 8000
-# SampleRate = 9000
-# SampleRate = 10000
 SampleRate = 16000
-# SampleRate = 24000
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--key", type=str)
@@ -128,22 +114,6 @@ if 'linux' in platform:
 else:
     source = sr.Microphone(sample_rate=SampleRate)
 
-# Load / Download model
-# model = args.model
-# if args.model != "large" and not args.non_english:
-#    model = model + ".en"
-# audio_model = whisper.load_model(model)
-
-"""
-if (USE_DEFAULT_MODEL == True):
-    processor = WhisperProcessor.from_pretrained(DEFAULT_MODEL)
-    model = WhisperForConditionalGeneration.from_pretrained(DEFAULT_MODEL)
-else:
-    processor = WhisperProcessor.from_pretrained(SAVEPATH)
-    model = WhisperForConditionalGeneration.from_pretrained(SAVEPATH, local_files_only=True)
-model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language="chinese", task="transcribe")
-"""
-
 record_timeout = args.record_timeout
 phrase_timeout = args.phrase_timeout
 
@@ -159,10 +129,6 @@ with source:
 
 
 def record_callback(_, audio: sr.AudioData) -> None:
-    """
-    Threaded callback function to recieve audio data when recordings finish.
-    audio: An AudioData containing the recorded bytes.
-    """
     # Grab the raw bytes and push it into the thread safe queue.
     data = audio.get_raw_data()
     data_queue.put(data)
@@ -229,60 +195,11 @@ while True:
                 torchaudio.save(temp_file + 'b.wav', est_sources[:, :, 1].detach().cpu(), 8000)
                 # ----------------------------------------------------------------------------------------------------------------
 
-                """
-                if DO_DENOISE:
-                    est_sources = denoise_model.separate_file(path=temp_file+'.wav')
-                    torchaudio.save(temp_file+'.wav', est_sources[:, :, 0].detach().cpu(), SampleRate)
-
-                speech, _ = librosa.load(temp_file+'.wav')
-                freq = np.argmax(np.abs(np.fft.rfft(speech))) * SampleRate / speech.size
-                # print('1: ', freq)
-                if Vocals[0] < freq < Vocals[1]:
-                    input_features = processor(speech, sampling_rate=SampleRate, return_tensors="pt").input_features
-                    predicted_ids = model.generate(input_features)
-                    transcription = processor.batch_decode(predicted_ids)
-                    text = processor.batch_decode(predicted_ids, skip_special_tokens = True)
-
-                    # If we detected a pause between recordings, add a new item to our transcripion.
-                    # Otherwise edit the existing one.
-                    if phrase_complete:
-                        transcription.append(text)
-                    #    print("append data")
-                    else:
-                    #    print("clear data")
-                        transcription[-1] = text
-                """
-
-                if DO_DENOISE:
-                    est_sources = denoise_model.separate_file(path=temp_file + 'b.wav')
-                    torchaudio.save(temp_file + 'b.wav', est_sources[:, :, 0].detach().cpu(), SampleRate)
-
                 speech, _ = librosa.load(temp_file + 'b.wav')
                 freq = np.argmax(np.abs(np.fft.rfft(speech))) * SampleRate / speech.size
                 # print('2: ', freq)
                 now = datetime.utcnow()
                 if Vocals[0] < freq < Vocals[1]:
-                    # input_features = processor(speech, sampling_rate=SampleRate, return_tensors="pt").input_features
-                    # predicted_ids = model.generate(input_features)
-                    # transcription2 = processor.batch_decode(predicted_ids)
-                    # text = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-
-                    """
-                    print(1)
-                    audio2 = speech_recognition.AudioFile("{}b.wav".format(temp_file))
-                    print(2)
-                    recognizer = speech_recognition.Recognizer()
-                    print(3)
-                    with audio2 as source:
-                        audioData = recognizer.record(source)
-                    print(4)
-                    result = recognizer.recognize_azure(audioData, key=args.key, language="zh-TW",
-                                                        location=args.region)
-                    print(5)
-                    if result.__len__() > 0:
-                        print(result[0])
-                        transcription2.append("['" + result[0] + "']")
-                    """
                     speech_config = speechsdk.SpeechConfig(subscription=args.key,
                                                            region=args.region)
 
@@ -299,17 +216,6 @@ while True:
                     word2 = result2.text
                     
                     similarity = match_keyword_sim(word1, word2)
-                    #ii = True
-                    #while ii:
-                    #    try:
-                    #        f0 = open('ddd.txt', 'w', encoding='utf8')
-                    #        f0.write('!!!!!!! = ' + str(similarity) + 'word1 = ' + word1 + ', word2 = ' + word2)
-                    #        f0.close()
-                    #        ii = False
-                    #    except:
-                    #        f0.close()
-                    #        ii = True
-                    
                     if similarity >= 0.3:
                         go = False
                     else:
@@ -326,33 +232,6 @@ while True:
                 if result.__len__() > 0:
                     transcription2.append("['" + result[0] + "']")
                 go = True
-                """
-                est_sources = sep_model.separate_file(path=temp_file0)
-                shutil.copyfile(temp_file0, temp_file + 'a.wav')
-
-                speech, _ = librosa.load(temp_file + 'a.wav')
-                freq = np.argmax(np.abs(np.fft.rfft(speech))) * SampleRate / speech.size
-                # print('2: ', freq)
-                if Vocals[0] < freq < Vocals[1]:
-                    input_features = processor(speech, sampling_rate=SampleRate, return_tensors="pt").input_features
-                    predicted_ids = model.generate(input_features)
-                    transcription2 = processor.batch_decode(predicted_ids)
-                    text = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-
-                    # If we detected a pause between recordings, add a new item to our transcripion.
-                    # Otherwise edit the existing one.
-                    if phrase_complete:
-                        transcription2.append(text)
-                    #   print("append data")
-                    else:
-                        #    print("clear data")
-                        transcription2[-1] = text
-                """
-
-            # Clear the console to reprint the updated transcription2.
-            # os.system('cls' if os.name=='nt' else 'clear')
-
-            #go = True
             while go:
                 try:
                     f2 = open('output.txt', 'w', encoding='utf8')
@@ -367,36 +246,22 @@ while True:
                     go = True
             transcription2.clear()
 
-            """
-            for line in transcription2:
-                print("2: ", line)
-            """
-            #try:
-            #    os.remove(temp_file0)
-            #except:
-            #    {}
+            try:
+                os.remove(temp_file0)
+            except:
+                {}
             try:
                 os.remove(temp_file + '.wav')
             except:
                 {}
-            #try:
-            #    os.remove(temp_file + 'b.wav')
-            #except:
-            #    {}
+            try:
+                os.remove(temp_file + 'b.wav')
+            except:
+                {}
             try:
                 os.remove(temp_file + 'a.wav')
             except:
                 {}
-            # Flush stdout.
-            # print('', end='', flush=True)
-
-            # Infinite loops are bad for processors, must sleep.
             sleep(0.1)
     except:
         {}    
-    # except KeyboardInterrupt:
-    #    break
-
-# print("\n\nTranscription:")
-# for line in transcription:
-#    print(line)
