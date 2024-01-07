@@ -204,9 +204,8 @@ public class inputChat : MonoBehaviour
         //讀取現有人物設定
         try
         {
-            var inputString = File.ReadAllText("CharacterSetting.json");
-            if (!String.IsNullOrEmpty(inputString))
-                chatGPT.m_DataList = JsonUtility.FromJson<Serialization<SendData>>(inputString).ToList();
+            var outputString = JsonUtility.ToJson(new Serialization<SendData>(chatGPT.m_DataList));
+            File.WriteAllText("CharacterSetting.json", outputString);
         }
         //無人物設定 則創建新檔案並儲存
         catch (Exception e)
